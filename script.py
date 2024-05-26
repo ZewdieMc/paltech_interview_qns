@@ -7,6 +7,7 @@ import rasterio as rio
 import json
 import os
 import glob
+import matplotlib.pyplot as plt
 
 # metadata keys
 keys_to_extract = [
@@ -108,7 +109,7 @@ def correct_vignette(image):
     return corrected_img, transf
 
 
-#For step 2: Dewarping---> distortion correction
+#For step 2: distortion correction
 def undistort_image(image):
     # get the dewarp data from the metadata
     dewarp_data = get_md_from_json(image, 'DewarpData')
@@ -166,8 +167,8 @@ def align_image(image_path):
 def align_exposure_diffs(tgt_path, src_path):
     
     #! without any of the correction steps
-    # tgt_img_data = align_image(tgt_path)
-    # src_img_data = align_image(src_path)
+    # tgt_img_data, _ = read_image(tgt_path)
+    # src_img_data, _ = read_image(src_path)
     
     #! only step1 correction
     # tgt_img_data, _ = correct_vignette(tgt_path)
@@ -252,5 +253,5 @@ if __name__ == '__main__':
     src_path = 'DJI_202405031358_001/DJI_20240503140325_0001_MS_R.TIF'
 
     ndvi = calculate_ndvi(tgt_path, src_path)
-    print(ndvi)
-    show(ndvi)
+    # print(ndvi)
+    show(ndvi, cmap=plt.cm.summer)
