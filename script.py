@@ -36,10 +36,6 @@ def get_metadata(file_path):
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON output: {e}")
         return {}
-    
-    # Get only the data needed for NDVI calculation
-def filter_metadata(metadata, keys):
-    return {key: metadata.get(key) for key in keys}
 
 
 # Get only the data needed for NDVI calculation
@@ -94,7 +90,6 @@ def correct_vignette(image):
 
     #convert string to numpy array
     k = np.array([float(i) for i in k.split(',')]).reshape(6, 1)
-    print(k)
 
     #read image
     data, transf = read_image(image)
@@ -113,7 +108,7 @@ def correct_vignette(image):
     return corrected_img, transf
 
 
-#For step 2: Dewarping
+#For step 2: Dewarping---> distortion correction
 def undistort_image(image):
     # get the dewarp data from the metadata
     dewarp_data = get_md_from_json(image, 'DewarpData')
@@ -149,10 +144,9 @@ def undistort_image(image):
 
     # # crop the image
     x, y, w, h = roi
-    dst = dst[y:y+h, x:x+w]
+    # dst = dst[y:y+h, x:x+w]
     return dst
 
-#For step 3: Alignment
 #step3: Align images
 def align_image(image_path):
     Hmatrix = get_md_from_json(image_path, 'CalibratedHMatrix')
@@ -171,10 +165,23 @@ def align_image(image_path):
 # step 4: align diffs due to exposure time
 def align_exposure_diffs(tgt_path, src_path):
     
-    # read the images
+    #! without any of the correction steps
+    # tgt_img_data = align_image(tgt_path)
+    # src_img_data = align_image(src_path)
+    
+    #! only step1 correction
+    # tgt_img_data, _ = correct_vignette(tgt_path)
+    # src_img_data, _ = correct_vignette(src_path)
+
+    #! step1 and step2 corrections
+    # tgt_img_data = undistort_image(tgt_path)
+    # src_img_data = undistort_image(src_path)
+    
+     #! step1 through step3 corrections
     tgt_img_data = align_image(tgt_path)
     src_img_data = align_image(src_path)
-    
+
+
     # apply Guassian smoothing
     src_img_datas = cv.GaussianBlur(src_img_data, (5, 5), 0)
     tgt_img_datas = cv.GaussianBlur(tgt_img_data, (5, 5), 0)
@@ -187,23 +194,63 @@ def align_exposure_diffs(tgt_path, src_path):
     edge_img1 = cv.convertScaleAbs(edge_img1)
     edge_img2 = cv.convertScaleAbs(edge_img2)
 
-    # convert to float32
+    # convert to float32 for ECC
     edge_img1 = np.float32(edge_img1)
     edge_img2 = np.float32(edge_img2)
     warp_matrix = np.eye(2, 3, dtype=np.float32)
     _, warp_matrix = cv.findTransformECC(edge_img1, edge_img2, warp_matrix, cv.MOTION_AFFINE)
     aligned_img2 = cv.warpAffine(src_img_data, warp_matrix, (tgt_img_data.shape[1], tgt_img_data.shape[0]), flags=cv.INTER_LINEAR + cv.WARP_INVERSE_MAP)    
-    show(aligned_img2)
-    show(tgt_img_data)
 
+    return tgt_img_data, aligned_img2
+
+def adjust_etime(etime):
+    print("etime:",etime)
+    x, y = map(float, etime.split('/'))
+    etime = x/y * 1e6 # 1e6 to convert to microseconds
+    return etime
 
 # NVDI calculation
 def calculate_ndvi(nir, red):
-    ...
+    nir_irradiance = get_md_from_json(nir, 'Irradiance') # NIR_ls * pLS_nir
+    red_irradiance = get_md_from_json(red, 'Irradiance') # RED_ls * pLS_red
+
+    pCam_nir = get_md_from_json(nir, 'SensorGainAdjustment')
+    pCam_red = get_md_from_json(red, 'SensorGainAdjustment')
+
+    #nir metadata
+    NIR_etime = adjust_etime(get_md_from_json(nir, 'ExposureTime'))
+    NIR_gain = get_md_from_json(nir, 'SensorGain')
+    # bitnum = get_md_from_json(nir, 'BitsPerSample')16
+    I_bl = 3200
+
+    #red metadata
+    RED_etime = adjust_etime(get_md_from_json(red, 'ExposureTime'))
+    RED_gain = get_md_from_json(red, 'SensorGain')
+    # I_bl_red = get_md_from_json(red, 'BlackLevel')
 
 
+    # get processed pixel values(step1 through step4)
+    I_nir, I_red = align_exposure_diffs(nir, red)
+
+    # normalized pixel values for NIR    
+    I_nir = I_nir.astype(np.float32) / 65535
+    I_red = I_red.astype(np.float32) / 65535
+
+    # nor
+
+    NIR_camera = (I_nir - I_bl) / (NIR_gain * NIR_etime/1e6)
+    RED_camera = (I_red - I_bl) / (RED_gain * RED_etime/1e6)
+
+    RED_ref = RED_camera * pCam_red / red_irradiance
+    NIR_ref = NIR_camera * pCam_nir / nir_irradiance
+    
+    ndvi = (NIR_ref - RED_ref) / (NIR_ref + RED_ref)
+    return ndvi
 
 if __name__ == '__main__':
-    tgt_path = 'DJI_202405031358_001/DJI_20240503140437_0006_MS_NIR.TIF'
-    src_path = 'DJI_202405031358_001/DJI_20240503140437_0006_MS_R.TIF'
-    align_exposure_diffs(tgt_path, src_path)
+    tgt_path = 'DJI_202405031358_001/DJI_20240503140325_0001_MS_NIR.TIF'
+    src_path = 'DJI_202405031358_001/DJI_20240503140325_0001_MS_R.TIF'
+
+    ndvi = calculate_ndvi(tgt_path, src_path)
+    print(ndvi)
+    show(ndvi)
