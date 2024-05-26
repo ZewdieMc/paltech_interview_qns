@@ -49,8 +49,6 @@ and `Center X`, `Center Y`, and `K` are obtained from the json file, `x` and `y`
 
 **Step4: NDVI calculation**  
 After correcting and aligning the NIR and RED images, NDVI for each pixel is computed using the folloiwng formula.  
-
-
 $$\mathrm{NDVI}=\frac{N I R_{\text {ref }}-\text { Red }_{\text {ref }}}{N I R_{\text {ref }}+\text { Red }_{\text {ref }}} = $$
 
 $$\left(\frac{N I R_{\text {camera }} \times p \operatorname{Cam}_{N I R}}{N I R_{L S} \times p L S_{N I R}}-\frac{\text { Red }_{\text {camera }} \times p \text { Cam }_{R e d}}{\operatorname{Red}_{L S} \times p L S_{R e d}}\right) /\left(\frac{N I R_{\text {camera }} \times p \operatorname{Cam}_{N I R}}{N I R_{L S} \times p L S_{N I R}}+\frac{\operatorname{Red}_{\text {camera }} \times p C a m_{R e d}}{R e d_{L S} \times p L S_{R e d}}\right)$$  
