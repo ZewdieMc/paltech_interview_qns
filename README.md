@@ -88,3 +88,6 @@ Develop a concept to determine the center of the plant in the
 images using image processing techniques.
 
 ## on progress ...
+<font color='red'>
+These last two weeks of May are intensive at IFROS. We are working on four parallel hands-on projects that need much of our attention. For this fact, I didn't complete the second task. If there are chances for me to submit the second task even after interview and after our hands-on project presentations, I will complete. 
+</font>
