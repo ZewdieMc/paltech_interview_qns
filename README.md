@@ -87,7 +87,59 @@ ndvi =
 Develop a concept to determine the center of the plant in the 
 images using image processing techniques.
 
-## on progress ...
-<font color='red'>
-These last two weeks of May are intensive at IFROS. We are working on four parallel hands-on projects that need much of our attention. For this fact, I didn't complete the second task. If there are chances for me to submit the second task even after interview and after our hands-on project presentations, I will complete. 
-</font>
+## Concept to determine center of plant in RGBD images using machine learning
+After doing a bit of hunt on how to determine the center a plant from RGBD images, I came up with the following machine learning algorithm(ML) which is backed with a research paper by [Yuhao Chen](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8265448). 
+```
+Algorithm LocatePlantCenter
+
+Input: RGBD image
+Output: Coordinates of crop plant centers
+
+1. Preprocessing:
+    1.1. Extract RGB channels and depth channel from RGBD image
+    1.2. Convert RGB image to grayscale
+    1.3. Define classification window size w
+
+2. Initialize:
+    2.1. Define Gabor filter parameters (orientations and frequencies)
+    2.2. Initialize MILBoost classifier
+
+3. Train MILBoost Classifier:
+    a. For each training image:
+        i. Extract candidate plant center locations (P)
+        ii. For each candidate P:
+            - Extract window W(P) of size w centered at P from both grayscale and depth images
+            - Compute Gabor features for W(P) from grayscale image
+            - Compute additional features from W(P) from depth image (e.g., texture, edges, gradients)
+        iii. Combine grayscale and depth features
+        iv. Create bags of instances for MIL
+        v. Label each bag (positive if it contains a plant center, negative otherwise)
+        vi. Train MILBoost classifier using labeled bags
+
+4. Classify Image Pixels:
+    a. For each pixel P in the input image:
+        i. Extract window W(P) of size w centered at P from both grayscale and depth images
+        ii. Compute Gabor features for W(P) from grayscale image
+        iii. Compute additional features for W(P) from depth image
+        iv. Combine grayscale and depth features
+        v. Classify W(P) using the trained MILBoost classifier
+        vi. Assign classification score to P
+
+5. Post-processing:
+    a. Generate mask of estimated plant centers from classification scores
+    b. Identify clusters in the mask, DBSCAN can be used here. ##https://scikit-learn.org/stable/modules/clustering.html#dbscan
+    c. Calculate centroids of largest cluster to determine plant center
+
+6. Output the coordinate of the identified plant center
+
+End Algorithm
+
+```
+  <img src="./image_center.png"/>  
+    
+    
+The idea is to train ML model to detect the plant center from a bunch of images and use the model to detect plant center of any unseen RGBD image. The algorithm is called Multiple Instance Learning(MIL) where training data is arranged in sets called `bags`. Bags are labeled according to the instance they contain. A bag is labeled positive if it contains at least one positive instance. A bag is labeled negative if it contains no positive instances. W(P) in the pseudo code is a square window of size `w` in the grayscale image centered at pixel P. The Gabor filter in the grapy scale images takes into account the plant orientation.
+
+
+## Answer to the question on pose estimation
+If the number of keypoints to estimate their pose is not fixed, the traditional pose estimation models may fail to accurately estimate the pose. One additional layer of complexity should be added to the pose estimation process to account for the unknown number of keypoints. Or using flexible architectures that adapt to varying number of keypoints such as Graph Neural Network(GNN) that take variable size inputs can be used.

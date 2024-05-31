@@ -166,18 +166,6 @@ def align_image(image_path):
 # step 4: align diffs due to exposure time
 def align_exposure_diffs(tgt_path, src_path):
     
-    #! without any of the correction steps
-    # tgt_img_data, _ = read_image(tgt_path)
-    # src_img_data, _ = read_image(src_path)
-    
-    #! only step1 correction
-    # tgt_img_data, _ = correct_vignette(tgt_path)
-    # src_img_data, _ = correct_vignette(src_path)
-
-    #! step1 and step2 corrections
-    # tgt_img_data = undistort_image(tgt_path)
-    # src_img_data = undistort_image(src_path)
-    
      #! step1 through step3 corrections
     tgt_img_data = align_image(tgt_path)
     src_img_data = align_image(src_path)
